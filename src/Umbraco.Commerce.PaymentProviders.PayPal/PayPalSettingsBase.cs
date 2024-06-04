@@ -54,6 +54,11 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal
             SortOrder = 1000000)]
         public bool SandboxMode { get; set; }
 
+        [PaymentProviderSetting(Name = "Negative Testing",
+            Description = "Set whether to process negative testing (sandbox mode have to be enabled).",
+            SortOrder = 1000100)]
+        public bool NegativeTesting { get; set; }
+
         // Advanced settings
         [PaymentProviderSetting(Name = "Brand Name",
             Description = "A brand name to override the business name with on the PayPal Checkout pages ",

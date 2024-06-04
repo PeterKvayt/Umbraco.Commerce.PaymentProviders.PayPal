@@ -2,10 +2,12 @@ using System.Linq;
 using Umbraco.Commerce.Core.Models;
 using Umbraco.Commerce.Core.Api;
 using Umbraco.Commerce.Core.PaymentProviders;
-using Umbraco.Commerce.PaymentProviders.PayPal.Api;
 using Umbraco.Commerce.PaymentProviders.PayPal.Api.Models;
 using System.Threading.Tasks;
 using System.Threading;
+using Umbraco.Commerce.PaymentProviders.PayPal.Api.Clients;
+using Umbraco.Commerce.PaymentProviders.PayPal.Api.Models.Configs;
+using System;
 
 namespace Umbraco.Commerce.PaymentProviders.PayPal
 {
@@ -136,26 +138,33 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal
             return PaymentStatus.Initialized;
         }
 
-        protected PayPalClientConfig GetPayPalClientConfig(PayPalSettingsBase settings)
+        protected static PayPalClient CreateClient(PayPalCheckoutOneTimeSettings settings)
         {
-            if (!settings.SandboxMode)
+            ArgumentNullException.ThrowIfNull(settings);
+
+            var isSandboxModeEnabled = settings.SandboxMode;
+
+            if (isSandboxModeEnabled)
             {
-                return new LivePayPalClientConfig
-                {
-                    ClientId = settings.LiveClientId,
-                    Secret = settings.LiveSecret,
-                    WebhookId = settings.LiveWebhookId
-                };
-            }
-            else
-            {
-                return new SandboxPayPalClientConfig
+                var sandboxConfig = new SandboxPayPalClientConfig
                 {
                     ClientId = settings.SandboxClientId,
                     Secret = settings.SandboxSecret,
-                    WebhookId = settings.SandboxWebhookId
+                    WebhookId = settings.SandboxWebhookId,
+                    IsNegativeTestingEnabled = settings.NegativeTesting
                 };
+
+                return new SandboxPayPalClient(sandboxConfig);
             }
+
+            var liveConfig = new LivePayPalClientConfig
+            {
+                ClientId = settings.LiveClientId,
+                Secret = settings.LiveSecret,
+                WebhookId = settings.LiveWebhookId
+            };
+
+            return new LivePayPalClient(liveConfig);
         }
     }
 }

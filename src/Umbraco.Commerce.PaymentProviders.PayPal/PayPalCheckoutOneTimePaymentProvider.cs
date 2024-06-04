@@ -4,7 +4,6 @@ using Umbraco.Commerce.Core.Models;
 using Umbraco.Commerce.Core.Api;
 using Umbraco.Commerce.Core.PaymentProviders;
 using Umbraco.Commerce.PaymentProviders.PayPal.Api.Models;
-using Umbraco.Commerce.PaymentProviders.PayPal.Api;
 using System.Globalization;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -17,9 +16,10 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal
     [PaymentProvider("paypal-checkout-onetime", "PayPal Checkout (One Time)", "PayPal Checkout payment provider for one time payments")]
     public class PayPalCheckoutOneTimePaymentProvider : PayPalPaymentProviderBase<PayPalCheckoutOneTimeSettings>
     {
-        private ILogger<PayPalCheckoutOneTimePaymentProvider> _logger;
+        private readonly ILogger<PayPalCheckoutOneTimePaymentProvider> _logger;
 
-        public PayPalCheckoutOneTimePaymentProvider(UmbracoCommerceContext ctx,
+        public PayPalCheckoutOneTimePaymentProvider(
+            UmbracoCommerceContext ctx,
             ILogger<PayPalCheckoutOneTimePaymentProvider> logger)
             : base(ctx)
         {
@@ -34,7 +34,8 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal
         // Don't finalize at continue as we will finalize async via webhook
         public override bool FinalizeAtContinueUrl => false;
 
-        public override IEnumerable<TransactionMetaDataDefinition> TransactionMetaDataDefinitions => new []{
+        public override IEnumerable<TransactionMetaDataDefinition> TransactionMetaDataDefinitions => new []
+        {
             new TransactionMetaDataDefinition("PayPalOrderId", "PayPal Order ID")
         };
 
@@ -42,8 +43,7 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal
         {
             try
             {
-                var clientConfig = GetPayPalClientConfig(ctx.Settings);
-                var client = new PayPalClient(clientConfig);
+                var client = CreateClient(ctx.Settings);
                 var payPalWebhookEvent = await GetPayPalWebhookEventAsync(client, ctx, cancellationToken).ConfigureAwait(false);
 
                 if (payPalWebhookEvent != null)
@@ -74,6 +74,8 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal
             return await base.GetOrderReferenceAsync(ctx, cancellationToken).ConfigureAwait(false);
         }
 
+
+
         public override async Task<PaymentFormResult> GenerateFormAsync(PaymentProviderContext<PayPalCheckoutOneTimeSettings> ctx, CancellationToken cancellationToken = default)
         {
             // Get currency information
@@ -87,8 +89,7 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal
             }
 
             // Create the order
-            var clientConfig = GetPayPalClientConfig(ctx.Settings);
-            var client = new PayPalClient(clientConfig);
+            var client = CreateClient(ctx.Settings);
             var payPalOrder = await client.CreateOrderAsync(
                 new PayPalCreateOrderRequest
                 {
@@ -134,8 +135,7 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal
         {
             try
             {
-                var clientConfig = GetPayPalClientConfig(ctx.Settings);
-                var client = new PayPalClient(clientConfig);
+                var client = CreateClient(ctx.Settings);
                 var payPalWebhookEvent = await GetPayPalWebhookEventAsync(client, ctx, cancellationToken).ConfigureAwait(false);
 
                 if (payPalWebhookEvent != null)
@@ -224,8 +224,7 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal
                 {
                     var payPalOrderId = ctx.Order.Properties["PayPalOrderId"].Value;
 
-                    var clientConfig = GetPayPalClientConfig(ctx.Settings);
-                    var client = new PayPalClient(clientConfig);
+                    var client = CreateClient(ctx.Settings);
                     var payPalOrder = await client.GetOrderAsync(payPalOrderId, cancellationToken).ConfigureAwait(false);
 
                     var paymentStatus = GetPaymentStatus(payPalOrder, out PayPalPayment payPalPayment);
@@ -254,8 +253,7 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal
             {
                 if (ctx.Order.TransactionInfo.PaymentStatus == PaymentStatus.Authorized)
                 {
-                    var clientConfig = GetPayPalClientConfig(ctx.Settings);
-                    var client = new PayPalClient(clientConfig);
+                    var client = CreateClient(ctx.Settings);
 
                     var payPalPayment = await client.CapturePaymentAsync(ctx.Order.TransactionInfo.TransactionId, cancellationToken).ConfigureAwait(false);
 
@@ -283,8 +281,7 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal
             {
                 if (ctx.Order.TransactionInfo.PaymentStatus == PaymentStatus.Captured)
                 {
-                    var clientConfig = GetPayPalClientConfig(ctx.Settings);
-                    var client = new PayPalClient(clientConfig);
+                    var client = CreateClient(ctx.Settings);
 
                     var payPalPayment = await client.RefundPaymentAsync(ctx.Order.TransactionInfo.TransactionId, cancellationToken).ConfigureAwait(false);
 
@@ -312,8 +309,7 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal
             {
                 if (ctx.Order.TransactionInfo.PaymentStatus == PaymentStatus.Authorized)
                 {
-                    var clientConfig = GetPayPalClientConfig(ctx.Settings);
-                    var client = new PayPalClient(clientConfig);
+                    var client = CreateClient(ctx.Settings);
 
                     await client.CancelPaymentAsync(ctx.Order.TransactionInfo.TransactionId, cancellationToken).ConfigureAwait(false);
 
